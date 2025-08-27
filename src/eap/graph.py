@@ -2,6 +2,8 @@ from typing import List, Dict, Union, Tuple, Literal, Optional, Set
 import json
 import heapq
 
+
+
 from einops import einsum
 import torch
 from transformer_lens import HookedTransformer, HookedTransformerConfig
@@ -200,6 +202,7 @@ class Graph:
         n_backward (int): The number of backward nodes/indices in the graph, i.e. the # of nodes whose input gradients we care about. Note that attention heads have 3 inputs that need to be dealt with during a backward pass
         cfg (HookedTransformerConfig): The configuration object for the graph.
     """
+
 
     nodes: Dict[str, Node]  # Maps from node names ('input', 'a0.h0', 'm0', 'logits', etc.) to Node objects
     edges: Dict[str, Edge]  # Maps from edge names ('input->a0.h0', 'a0.h0->m0', etc.) to Edge objects. Attn edges are denoted as 'input->a0.h0<q>', 'input->a0.h0<k>', 'input->a0.h0<v>'
