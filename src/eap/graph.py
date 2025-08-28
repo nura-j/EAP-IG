@@ -604,7 +604,7 @@ class Graph:
             
 
     @classmethod
-    def from_model(cls, model_or_config: Union[HookedTransformer,HookedTransformerConfig, Dict], neuron_level: bool = False, node_scores: bool = False) -> 'Graph':
+    def from_model(cls, model_or_config, neuron_level: bool = False, node_scores: bool = False) -> 'Graph':
         """Instantiate a Graph object from a HookedTransformer or HookedTransformerConfig object, or a similar Dict. The neuron_level parameter determines whether the graph should be neuron-level or not, while the node_scores parameter determines whether the graph should have node scores or not. If you don't have scores for all nodes / neurons, just don't set them (default is torch.nan). Any node/neuron without a real score will always be kept in the graph when doing node/neuron-level topn (but might be eliminated by another level's topn, e.g. a node with no neuron scores might be removed if it loses all edges)
 
         Args:
