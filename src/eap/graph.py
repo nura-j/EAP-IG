@@ -620,7 +620,8 @@ class Graph:
         """
         graph = Graph()
         graph.cfg = GraphConfig()
-        if isinstance(model_or_config, HookedTransformer) or isinstance(model_or_config, torch.nn.Module):
+        print(f"Creating graph from {type(model_or_config)}")
+        if isinstance(model_or_config, HookedTransformer) or isinstance(model_or_config, torch.nn.Module): # todo: this must be fixed to trace transformer models
             cfg = model_or_config.cfg
             graph.cfg.update({'n_layers': cfg.n_layers, 'n_heads': cfg.n_heads, 'parallel_attn_mlp':cfg.parallel_attn_mlp, 'd_model': cfg.d_model})
         elif isinstance(model_or_config, HookedTransformerConfig):
