@@ -92,7 +92,11 @@ def get_scores_eap(model: HookedTransformer, graph: Graph, dataloader:DataLoader
                 activation_difference += means
 
             # For some metrics (e.g. accuracy or KL), we need the clean logits
-            clean_logits = model(clean_tokens, attention_mask=attention_mask)
+            if isinstance(model, torch.nn.Module) and model.cfg.model_type == 'decoder_only':
+                # For decoder-only models, we need to do a full forward pass to get the correct causal attention mask
+                clean_logits = model(tgt=clean_tokens, attention_mask=attention_mask)
+            else:
+                clean_logits = model(clean_tokens, attention_mask=attention_mask)
 
         with model.hooks(fwd_hooks=fwd_hooks_clean, bwd_hooks=bwd_hooks):
             if isinstance(model, torch.nn.Module) and model.cfg.model_type == 'decoder_only':
