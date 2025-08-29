@@ -207,7 +207,10 @@ def evaluate_graph(model: HookedTransformer, graph: Graph, dataloader: DataLoade
             if intervention == 'patching':
                 # We intervene by subtracting out clean and adding in corrupted activations
                 with model.hooks(fwd_hooks_corrupted):
-                    corrupted_logits = model(corrupted_tokens, attention_mask=attention_mask)
+                    if isinstance(model, torch.nn.Module) and hasattr(model, 'cfg') and model.cfg.model_type == 'decoder_only':
+                        corrupted_logits = model(tgt=corrupted_tokens, attention_mask=attention_mask)
+                    else:
+                        corrupted_logits = model(corrupted_tokens, attention_mask=attention_mask)
             else:
                 # In the case of zero or mean ablation, we skip the adding in corrupted activations
                 # but in mean ablations, we need to add the mean in
@@ -215,10 +218,21 @@ def evaluate_graph(model: HookedTransformer, graph: Graph, dataloader: DataLoade
                     activation_difference += means
 
             # For some metrics (e.g. accuracy or KL), we need the clean logits
-            clean_logits = None if skip_clean else model(clean_tokens, attention_mask=attention_mask)
+            if skip_clean:
+                clean_logits = None
+            else:
+                if isinstance(model, torch.nn.Module) and hasattr(model,
+                                                                  'cfg') and model.cfg.model_type == 'decoder_only':
+                    clean_logits = model(tgt=clean_tokens, attention_mask=attention_mask)
+                else:
+                    clean_logits = model(clean_tokens, attention_mask=attention_mask)
+            # clean_logits = None if skip_clean else model(clean_tokens, attention_mask=attention_mask)
                 
             with model.hooks(fwd_hooks_clean + input_construction_hooks):
-                logits = model(clean_tokens, attention_mask=attention_mask)
+                if isinstance(model, torch.nn.Module) and hasattr(model, 'cfg') and model.cfg.model_type == 'decoder_only':
+                    logits = model(tgt=clean_tokens, attention_mask=attention_mask)
+                else:
+                    logits = model(clean_tokens, attention_mask=attention_mask)
 
         for i, metric in enumerate(metrics):
             r = metric(logits, clean_logits, input_lengths, label).cpu()
@@ -256,8 +270,12 @@ def evaluate_baseline(model: HookedTransformer, dataloader:DataLoader, metrics: 
         clean_tokens, attention_mask, input_lengths, _ = tokenize_plus(model, clean)
         corrupted_tokens, _, _, _ = tokenize_plus(model, corrupted)
         with torch.inference_mode():
-            corrupted_logits = model(corrupted_tokens, attention_mask=attention_mask)
-            logits = model(clean_tokens, attention_mask=attention_mask)
+            if isinstance(model, torch.nn.Module) and hasattr(model, 'cfg') and model.cfg.model_type == 'decoder_only':
+                corrupted_logits = model(tgt=corrupted_tokens, attention_mask=attention_mask)
+                logits = model(tgt=clean_tokens, attention_mask=attention_mask)
+            else:
+                corrupted_logits = model(corrupted_tokens, attention_mask=attention_mask)
+                logits = model(clean_tokens, attention_mask=attention_mask)
         for i, metric in enumerate(metrics):
             if run_corrupted:
                 r = metric(corrupted_logits, logits, input_lengths, label).cpu()
