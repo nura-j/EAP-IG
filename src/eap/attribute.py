@@ -95,7 +95,11 @@ def get_scores_eap(model: HookedTransformer, graph: Graph, dataloader:DataLoader
             clean_logits = model(clean_tokens, attention_mask=attention_mask)
 
         with model.hooks(fwd_hooks=fwd_hooks_clean, bwd_hooks=bwd_hooks):
-            logits = model(clean_tokens, attention_mask=attention_mask)
+            if isinstance(model, torch.nn.Module) and model.cfg.model_type == 'decoder_only':
+                # For decoder-only models, we need to do a full forward pass to get the correct causal attention mask
+                logits = model(tgt=clean_tokens, attention_mask=attention_mask)
+            else:
+                logits = model(clean_tokens, attention_mask=attention_mask)
             metric_value = metric(logits, clean_logits, input_lengths, label)
             metric_value.backward()
 
