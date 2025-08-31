@@ -100,7 +100,9 @@ class LogitNode(Node):
     def __init__(self, n_layers:int, graph: 'Graph'):
         name = 'logits' 
         index = slice(None) 
-        super().__init__(name, n_layers - 1, f"blocks.{n_layers - 1}.hook_resid_post", '', index, graph)
+        # super().__init__(name, n_layers - 1, f"blocks.{n_layers - 1}.hook_resid_post", '', index, graph)
+        super().__init__(name, n_layers - 1, f"decoder.{n_layers - 1}.hook_resid_post", '', index, graph)
+
         
     @property
     def in_graph(self):
@@ -114,7 +116,9 @@ class MLPNode(Node):
     def __init__(self, layer: int, graph: 'Graph'):
         name = f'm{layer}'
         index = slice(None)
-        super().__init__(name, layer, f"blocks.{layer}.hook_mlp_in", f"blocks.{layer}.hook_mlp_out", index, graph)
+        # super().__init__(name, layer, f"blocks.{layer}.hook_mlp_in", f"blocks.{layer}.hook_mlp_out", index, graph)
+        super().__init__(name, layer, f"decoder.{layer}.hook_mlp_in", f"decoder.{layer}.hook_mlp_out", index, graph)
+
 
 class AttentionNode(Node):
     head: int
@@ -122,7 +126,9 @@ class AttentionNode(Node):
         name = f'a{layer}.h{head}' 
         self.head = head
         index = (slice(None), slice(None), head) 
-        super().__init__(name, layer, f'blocks.{layer}.hook_attn_in', f"blocks.{layer}.attn.hook_result", index, graph, qkv_inputs=[f'blocks.{layer}.hook_{letter}_input' for letter in 'qkv'])
+        # super().__init__(name, layer, f'blocks.{layer}.hook_attn_in', f"blocks.{layer}.attn.hook_result", index, graph, qkv_inputs=[f'blocks.{layer}.hook_{letter}_input' for letter in 'qkv'])
+        super().__init__(name, layer, f'decoder.{layer}.hook_attn_in', f"decoder.{layer}.attn.hook_result", index, graph, qkv_inputs=[f'decoder.{layer}.hook_{letter}_input' for letter in 'qkv'])
+
 
 class InputNode(Node):
     def __init__(self, graph: 'Graph'):
@@ -158,7 +164,8 @@ class Edge:
         if isinstance(child, AttentionNode):
             if qkv is None:
                 raise ValueError(f'Edge({self.name}): Edges to attention heads must have a non-none value for qkv.')
-            self.hook = f'blocks.{child.layer}.hook_{qkv}_input'
+            # self.hook = f'blocks.{child.layer}.hook_{qkv}_input'
+            self.hook = f'decoder.{child.layer}.hook_{qkv}_input'
             self.index = (slice(None), slice(None), child.head)
         else:
             self.index = child.index
