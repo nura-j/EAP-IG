@@ -31,7 +31,7 @@ def tokenize_plus(model: HookedTransformer, inputs: List[str], max_length: Optio
     if max_length is not None:
         old_n_ctx = model.cfg.n_ctx
         model.cfg.n_ctx = max_length
-    if isinstance(model, HookedTransformer):
+    if isinstance(model, HookedTransformer) and not hasattr(model, 'model_type'):
         tokens = model.to_tokens(inputs, prepend_bos=True, padding_side='right', truncate=(max_length is not None))
         if max_length is not None:
             model.cfg.n_ctx = old_n_ctx
