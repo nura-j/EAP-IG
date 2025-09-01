@@ -85,7 +85,7 @@ def get_scores_eap(model: HookedTransformer, graph: Graph, dataloader:DataLoader
                         # For decoder-only models, we need to do a full forward pass to get the correct causal attention mask
                         _ = model(tgt= corrupted_tokens, attention_mask=attention_mask)
                     else:
-                        _ = model(corrupted_tokens, attention_mask=attention_mask)
+                        _ = model(tgt= corrupted_tokens, attention_mask=attention_mask)
             elif 'mean' in intervention:
                 # In the case of zero or mean ablation, we skip the adding in corrupted activations
                 # but in mean ablations, we need to add the mean in
@@ -96,15 +96,15 @@ def get_scores_eap(model: HookedTransformer, graph: Graph, dataloader:DataLoader
                 # For decoder-only models, we need to do a full forward pass to get the correct causal attention mask
                 clean_logits = model(tgt=clean_tokens, attention_mask=attention_mask)
             else:
-                clean_logits = model(clean_tokens, attention_mask=attention_mask)
-        if isinstance(model, HookedTransformer):
-            pass
+                clean_logits = model(tgt= clean_tokens, attention_mask=attention_mask)
+        # if isinstance(model, HookedTransformer):
+        #     pass
         with model.hooks(fwd_hooks=fwd_hooks_clean, bwd_hooks=bwd_hooks):
             if isinstance(model, torch.nn.Module) and model.cfg.model_type == 'decoder_only':
                 # For decoder-only models, we need to do a full forward pass to get the correct causal attention mask
                 logits = model(tgt=clean_tokens, attention_mask=attention_mask)
             else:
-                logits = model(clean_tokens, attention_mask=attention_mask)
+                logits = model(tgt= clean_tokens, attention_mask=attention_mask)
             metric_value = metric(logits, clean_logits, input_lengths, label)
             metric_value.backward()
 
