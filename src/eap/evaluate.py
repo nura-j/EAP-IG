@@ -207,8 +207,15 @@ def evaluate_graph(model: HookedTransformer, graph: Graph, dataloader: DataLoade
             if intervention == 'patching':
                 # We intervene by subtracting out clean and adding in corrupted activations
                 with model.hooks(fwd_hooks_corrupted):
-                    if isinstance(model, torch.nn.Module) and hasattr(model, 'cfg') and model.cfg.model_type == 'decoder_only':
+                    if isinstance(model, torch.nn.Module) and hasattr(model.cfg,
+                                                                      'model_type') and model.cfg.model_type == 'decoder_only':
                         corrupted_logits = model(tgt=corrupted_tokens, attention_mask=attention_mask)
+                    elif isinstance(model, torch.nn.Module) and hasattr(model.cfg,
+                                                                      'model_type') and model.cfg.model_type == 'encoder_decoder':
+                        corrupted_logits = model(src=corrupted_tokens, tgt=corrupted_tokens)
+                    elif isinstance(model, torch.nn.Module) and hasattr(model.cfg,
+                                                                        'model_type') and model.cfg.model_type == 'encoder_only':
+                        corrupted_logits = model(src=corrupted_tokens, attention_mask=attention_mask)
                     else:
                         corrupted_logits = model(corrupted_tokens, attention_mask=attention_mask)
             else:
@@ -221,16 +228,29 @@ def evaluate_graph(model: HookedTransformer, graph: Graph, dataloader: DataLoade
             if skip_clean:
                 clean_logits = None
             else:
-                if isinstance(model, torch.nn.Module) and hasattr(model,
-                                                                  'cfg') and model.cfg.model_type == 'decoder_only':
+                if isinstance(model, torch.nn.Module) and hasattr(model.cfg,
+                                                                  'model_type') and model.cfg.model_type == 'decoder_only':
                     clean_logits = model(tgt=clean_tokens, attention_mask=attention_mask)
+                elif isinstance(model, torch.nn.Module) and hasattr(model.cfg,
+                                                                  'model_type') and model.cfg.model_type == 'encoder_decoder':
+                    clean_logits = model(tgt=clean_tokens, src=clean_tokens)
+                elif isinstance(model, torch.nn.Module) and hasattr(model.cfg,
+                                                                    'model_type') and model.cfg.model_type == 'encoder_only':
+                    clean_logits = model(src=clean_tokens, attention_mask=attention_mask)
                 else:
                     clean_logits = model(clean_tokens, attention_mask=attention_mask)
             # clean_logits = None if skip_clean else model(clean_tokens, attention_mask=attention_mask)
                 
             with model.hooks(fwd_hooks_clean + input_construction_hooks):
-                if isinstance(model, torch.nn.Module) and hasattr(model, 'cfg') and model.cfg.model_type == 'decoder_only':
+                if isinstance(model, torch.nn.Module) and hasattr(model.cfg,
+                                                                  'model_type') and model.cfg.model_type == 'decoder_only':
                     logits = model(tgt=clean_tokens, attention_mask=attention_mask)
+                elif isinstance(model, torch.nn.Module) and hasattr(model.cfg,
+                                                                  'model_type') and model.cfg.model_type == 'encoder_decoder':
+                    logits = model(tgt=clean_tokens, src=clean_tokens)
+                elif isinstance(model, torch.nn.Module) and hasattr(model.cfg,
+                                                                    'model_type') and model.cfg.model_type == 'encoder_only':
+                    logits = model(src=clean_tokens, attention_mask=attention_mask)
                 else:
                     logits = model(clean_tokens, attention_mask=attention_mask)
 
@@ -270,9 +290,18 @@ def evaluate_baseline(model: HookedTransformer, dataloader:DataLoader, metrics: 
         clean_tokens, attention_mask, input_lengths, _ = tokenize_plus(model, clean)
         corrupted_tokens, _, _, _ = tokenize_plus(model, corrupted)
         with torch.inference_mode():
-            if isinstance(model, torch.nn.Module) and hasattr(model, 'cfg') and model.cfg.model_type == 'decoder_only':
+            if isinstance(model, torch.nn.Module) and hasattr(model.cfg,
+                                                              'model_type') and model.cfg.model_type == 'decoder_only':
                 corrupted_logits = model(tgt=corrupted_tokens, attention_mask=attention_mask)
                 logits = model(tgt=clean_tokens, attention_mask=attention_mask)
+            elif isinstance(model, torch.nn.Module) and hasattr(model.cfg,
+                                                              'model_type') and model.cfg.model_type == 'encoder_decoder':
+                corrupted_logits = model(src=corrupted_tokens, tgt=corrupted_tokens)
+                logits = model(src=clean_tokens, tgt=clean_tokens)
+            elif isinstance(model, torch.nn.Module) and hasattr(model.cfg,
+                                                                'model_type') and model.cfg.model_type == 'encoder_only':
+                corrupted_logits = model(src=corrupted_tokens, attention_mask=attention_mask)
+                logits = model(src=clean_tokens, attention_mask=attention_mask)
             else:
                 corrupted_logits = model(corrupted_tokens, attention_mask=attention_mask)
                 logits = model(clean_tokens, attention_mask=attention_mask)

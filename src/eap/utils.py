@@ -38,19 +38,19 @@ def tokenize_plus(model: HookedTransformer, inputs: List[str], max_length: Optio
     input_lengths = attention_mask.sum(1)
     n_pos = attention_mask.size(1)
     return tokens, attention_mask, input_lengths, n_pos
-    if isinstance(model, HookedTransformer) and not hasattr(model, 'model_type') and model.model_type == 'decoder_only':
-        tokens = model.to_tokens(inputs, prepend_bos=True, padding_side='right', truncate=(max_length is not None))
-        if max_length is not None:
-            model.cfg.n_ctx = old_n_ctx
-        attention_mask = get_attention_mask(model.tokenizer, tokens, True)
-        input_lengths = attention_mask.sum(1)
-        n_pos = attention_mask.size(1)
-    else:
-        tokens = model.tokenizer(inputs, return_tensors='pt', padding=True, truncation=True, max_length=max_length)['input_ids'].to(model.cfg.device)
-        input_lengths = (tokens != model.tokenizer.pad_token_id).sum(1)
-        n_pos = tokens.size(1)
-        attention_mask = (tokens != model.tokenizer.pad_token_id).long()
-    return tokens, attention_mask, input_lengths, n_pos
+    # if isinstance(model, HookedTransformer) and not hasattr(model, 'model_type') and model.model_type == 'decoder_only':
+    #     tokens = model.to_tokens(inputs, prepend_bos=True, padding_side='right', truncate=(max_length is not None))
+    #     if max_length is not None:
+    #         model.cfg.n_ctx = old_n_ctx
+    #     attention_mask = get_attention_mask(model.tokenizer, tokens, True)
+    #     input_lengths = attention_mask.sum(1)
+    #     n_pos = attention_mask.size(1)
+    # else:
+    #     tokens = model.tokenizer(inputs, return_tensors='pt', padding=True, truncation=True, max_length=max_length)['input_ids'].to(model.cfg.device)
+    #     input_lengths = (tokens != model.tokenizer.pad_token_id).sum(1)
+    #     n_pos = tokens.size(1)
+    #     attention_mask = (tokens != model.tokenizer.pad_token_id).long()
+    # return tokens, attention_mask, input_lengths, n_pos
 
 def make_hooks_and_matrices(model: HookedTransformer, graph: Graph, batch_size:int , n_pos:int, scores: Optional[Tensor]):
     """Makes a matrix, and hooks to fill it and the score matrix up
@@ -218,7 +218,17 @@ def compute_mean_activations(model: HookedTransformer, graph: Graph, dataloader:
         add_to_mean_hooks = [(hook_point, partial(activation_hook, index, means=means, input_lengths=input_lengths)) for hook_point, index in hook_points_indices]
 
         with model.hooks(fwd_hooks=add_to_mean_hooks):
-            model(tokens, attention_mask=attention_mask)
+            if isinstance(model, torch.nn.Module) and hasattr(model.cfg,
+                                                              'model_type') and model.cfg.model_type == 'decoder_only':
+                model(tgt=tokens, attention_mask=attention_mask)
+            elif isinstance(model, torch.nn.Module) and hasattr(model.cfg,
+                                                                'model_type') and model.cfg.model_type == 'encoder_only':
+                model(src=tokens, attention_mask=attention_mask)
+            elif isinstance(model, torch.nn.Module) and hasattr(model.cfg,
+                                                                  'model_type') and model.cfg.model_type == 'encoder_decoder':
+                model(src=tokens, tgt=tokens, src_attention_mask=attention_mask, tgt_attention_mask=attention_mask)
+            else:
+                model(tokens, attention_mask=attention_mask)
 
     means = means.squeeze(0)
     means /= total

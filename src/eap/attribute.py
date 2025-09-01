@@ -85,6 +85,12 @@ def get_scores_eap(model: HookedTransformer, graph: Graph, dataloader:DataLoader
                     if isinstance(model, torch.nn.Module) and hasattr(model.cfg, 'model_type') and model.cfg.model_type == 'decoder_only':
                         # For decoder-only models, we need to do a full forward pass to get the correct causal attention mask
                         _ = model(tgt= corrupted_tokens, attention_mask=attention_mask)
+                    elif isinstance(model, torch.nn.Module) and hasattr(model.cfg, 'model_type') and model.cfg.model_type == 'encoder_decoder':
+                        # For encoder-decoder models, we need to pass in the encoder tokens to get the correct cross-attention mask
+                        # Here, we just pass in the corrupted tokens as both encoder and decoder inputs
+                        _ = model(enc=corrupted_tokens, tgt=corrupted_tokens, attention_mask=attention_mask, enc_attention_mask=attention_mask)
+                    elif isinstance(model, torch.nn.Module) and hasattr(model.cfg, 'model_type') and model.cfg.model_type == 'encoder_only':
+                        _ = model(src=corrupted_tokens, attention_mask=attention_mask)
                     else:
                         _ = model(corrupted_tokens, attention_mask=attention_mask)
             elif 'mean' in intervention:
@@ -98,6 +104,14 @@ def get_scores_eap(model: HookedTransformer, graph: Graph, dataloader:DataLoader
                                                               'model_type') and model.cfg.model_type == 'decoder_only':
                 # For decoder-only models, we need to do a full forward pass to get the correct causal attention mask
                 clean_logits = model(tgt=clean_tokens, attention_mask=attention_mask)
+            elif isinstance(model, torch.nn.Module) and hasattr(model.cfg,
+                                                                'model_type') and model.cfg.model_type == 'encoder_decoder':
+                # For encoder-decoder models, we need to pass in the encoder tokens to get the correct cross-attention mask
+                # Here, we just pass in the clean tokens as both encoder and decoder inputs
+                clean_logits = model(enc=clean_tokens, tgt=clean_tokens, attention_mask=attention_mask, enc_attention_mask=attention_mask)
+            elif isinstance(model, torch.nn.Module) and hasattr(model.cfg,
+                                                                'model_type') and model.cfg.model_type == 'encoder_only':
+                clean_logits = model(src=clean_tokens, attention_mask=attention_mask)
             else:
                 clean_logits = model(clean_tokens, attention_mask=attention_mask)
         # if isinstance(model, HookedTransformer):
@@ -108,6 +122,15 @@ def get_scores_eap(model: HookedTransformer, graph: Graph, dataloader:DataLoader
                                                               'model_type') and model.cfg.model_type == 'decoder_only':
                 # For decoder-only models, we need to do a full forward pass to get the correct causal attention mask
                 logits = model(tgt=clean_tokens, attention_mask=attention_mask)
+            elif isinstance(model, torch.nn.Module) and hasattr(model.cfg,
+                                                                'model_type') and model.cfg.model_type == 'encoder_decoder':
+                # For encoder-decoder models, we need to pass in the encoder tokens to get the correct cross-attention mask
+                # Here, we just pass in the clean tokens as both encoder and decoder inputs
+                logits = model(enc=clean_tokens, tgt=clean_tokens, attention_mask=attention_mask
+                                 , enc_attention_mask=attention_mask)
+            elif isinstance(model, torch.nn.Module) and hasattr(model.cfg,
+                                                                'model_type') and model.cfg.model_type == 'encoder_only':
+                logits = model(src=clean_tokens, attention_mask=attention_mask)
             else:
                 logits = model(clean_tokens, attention_mask=attention_mask)
             metric_value = metric(logits, clean_logits, input_lengths, label)
@@ -155,12 +178,32 @@ def get_scores_eap_ig(model: HookedTransformer, graph: Graph, dataloader: DataLo
 
         with torch.inference_mode():
             with model.hooks(fwd_hooks=fwd_hooks_corrupted):
-                _ = model(input_ids=corrupted_tokens, attention_mask=attention_mask)
+                if isinstance(model, torch.nn.Module) and hasattr(model.cfg, 'model_type') and model.cfg.model_type == 'decoder_only':
+                    # For decoder-only models, we need to do a full forward pass to get the correct causal attention mask
+                    _ = model(tgt= corrupted_tokens, attention_mask=attention_mask)
+                elif isinstance(model, torch.nn.Module) and hasattr(model.cfg, 'model_type') and model.cfg.model_type == 'encoder_decoder':
+                    # For encoder-decoder models, we need to pass in the encoder tokens to get the correct cross-attention mask
+                    # Here, we just pass in the corrupted tokens as both encoder and decoder inputs
+                    _ = model(enc=corrupted_tokens, tgt=corrupted_tokens, attention_mask=attention_mask, enc_attention_mask=attention_mask)
+                elif isinstance(model, torch.nn.Module) and hasattr(model.cfg, 'model_type') and model.cfg.model_type == 'encoder_only':
+                    _ = model(src=corrupted_tokens, attention_mask=attention_mask)
+                else:
+                    _ = model(input_ids=corrupted_tokens, attention_mask=attention_mask)
 
             input_activations_corrupted = activation_difference[:, :, graph.forward_index(graph.nodes['input'])].clone()
 
             with model.hooks(fwd_hooks=fwd_hooks_clean):
-                clean_logits = model(input_ids=clean_tokens, attention_mask=attention_mask)
+                if isinstance(model, torch.nn.Module) and hasattr(model.cfg, 'model_type') and model.cfg.model_type == 'decoder_only':
+                    # For decoder-only models, we need to do a full forward pass to get the correct causal attention mask
+                    clean_logits = model(tgt= clean_tokens, attention_mask=attention_mask)
+                elif isinstance(model, torch.nn.Module) and hasattr(model.cfg, 'model_type') and model.cfg.model_type == 'encoder_decoder':
+                    # For encoder-decoder models, we need to pass in the encoder tokens to get the correct cross-attention mask
+                    # Here, we just pass in the clean tokens as both encoder and decoder inputs
+                    clean_logits = model(enc=clean_tokens, tgt=clean_tokens, attention_mask=attention_mask, enc_attention_mask=attention_mask)
+                elif isinstance(model, torch.nn.Module) and hasattr(model.cfg, 'model_type') and model.cfg.model_type == 'encoder_only':
+                    clean_logits = model(src=clean_tokens, attention_mask=attention_mask)
+                else:
+                    clean_logits = model(input_ids=clean_tokens, attention_mask=attention_mask)
 
             input_activations_clean = input_activations_corrupted - activation_difference[:, :, graph.forward_index(graph.nodes['input'])]
 
@@ -175,7 +218,17 @@ def get_scores_eap_ig(model: HookedTransformer, graph: Graph, dataloader: DataLo
         for step in range(0, steps):
             total_steps += 1
             with model.hooks(fwd_hooks=[(graph.nodes['input'].out_hook, input_interpolation_hook(step))], bwd_hooks=bwd_hooks):
-                logits = model(input_ids=clean_tokens, attention_mask=attention_mask)
+                if isinstance(model, torch.nn.Module) and hasattr(model.cfg, 'model_type') and model.cfg.model_type == 'decoder_only':
+                    # For decoder-only models, we need to do a full forward pass to get the correct causal attention mask
+                    logits = model(tgt= clean_tokens, attention_mask=attention_mask)
+                elif isinstance(model, torch.nn.Module) and hasattr(model.cfg, 'model_type') and model.cfg.model_type == 'encoder_decoder':
+                    # For encoder-decoder models, we need to pass in the encoder tokens to get the correct cross-attention mask
+                    # Here, we just pass in the clean tokens as both encoder and decoder inputs
+                    logits = model(enc=clean_tokens, tgt=clean_tokens, attention_mask=attention_mask, enc_attention_mask=attention_mask)
+                elif isinstance(model, torch.nn.Module) and hasattr(model.cfg, 'model_type') and model.cfg.model_type == 'encoder_only':
+                    logits = model(src=clean_tokens, attention_mask=attention_mask)
+                else:
+                    logits = model(input_ids=clean_tokens, attention_mask=attention_mask)
                 metric_value = metric(logits, clean_logits, input_lengths, label)
                 if torch.isnan(metric_value).any().item():
                     print("Metric value is NaN")
@@ -229,14 +282,34 @@ def get_scores_ig_activations(model: HookedTransformer, graph: Graph, dataloader
 
         if intervention == 'patching':
             with model.hooks(fwd_hooks=fwd_hooks_corrupted):
-                _ = model(corrupted_tokens, attention_mask=attention_mask)
+                if isinstance(model, torch.nn.Module) and hasattr(model.cfg, 'model_type') and model.cfg.model_type == 'decoder_only':
+                    # For decoder-only models, we need to do a full forward pass to get the correct causal attention mask
+                    _ = model(tgt= corrupted_tokens, attention_mask=attention_mask)
+                elif isinstance(model, torch.nn.Module) and hasattr(model.cfg, 'model_type') and model.cfg.model_type == 'encoder_decoder':
+                    # For encoder-decoder models, we need to pass in the encoder tokens to get the correct cross-attention mask
+                    # Here, we just pass in the corrupted tokens as both encoder and decoder inputs
+                    _ = model(enc=corrupted_tokens, tgt=corrupted_tokens, attention_mask=attention_mask, enc_attention_mask=attention_mask)
+                elif isinstance(model, torch.nn.Module) and hasattr(model.cfg, 'model_type') and model.cfg.model_type == 'encoder_only':
+                    _ = model(src=corrupted_tokens, attention_mask=attention_mask)
+                else:
+                    _ = model(corrupted_tokens, attention_mask=attention_mask)
 
         elif 'mean' in intervention:
             activation_difference += means
 
 
         with model.hooks(fwd_hooks=fwd_hooks_clean):
-            clean_logits = model(clean_tokens, attention_mask=attention_mask)
+            if isinstance(model, torch.nn.Module) and hasattr(model.cfg, 'model_type') and model.cfg.model_type == 'decoder_only':
+                # For decoder-only models, we need to do a full forward pass to get the correct causal attention mask
+                clean_logits = model(tgt= clean_tokens, attention_mask=attention_mask)
+            elif isinstance(model, torch.nn.Module) and hasattr(model.cfg, 'model_type') and model.cfg.model_type == 'encoder_decoder':
+                # For encoder-decoder models, we need to pass in the encoder tokens to get the correct cross-attention mask
+                # Here, we just pass in the clean tokens as both encoder and decoder inputs
+                clean_logits = model(enc=clean_tokens, tgt=clean_tokens, attention_mask=attention_mask, enc_attention_mask=attention_mask)
+            elif isinstance(model, torch.nn.Module) and hasattr(model.cfg, 'model_type') and model.cfg.model_type == 'encoder_only':
+                clean_logits = model(src=clean_tokens, attention_mask=attention_mask)
+            else:
+                clean_logits = model(clean_tokens, attention_mask=attention_mask)
             activation_difference += activations_corrupted.clone().detach() - activations_clean.clone().detach()
 
         def output_interpolation_hook(k: int, clean: torch.Tensor, corrupted: torch.Tensor):
@@ -262,7 +335,17 @@ def get_scores_ig_activations(model: HookedTransformer, graph: Graph, dataloader
                 fwd_hooks = [(node.out_hook, output_interpolation_hook(step, clean_acts, corrupted_acts))]
 
                 with model.hooks(fwd_hooks=fwd_hooks, bwd_hooks=bwd_hooks):
-                    logits = model(clean_tokens, attention_mask=attention_mask)
+                    if isinstance(model, torch.nn.Module) and hasattr(model.cfg, 'model_type') and model.cfg.model_type == 'decoder_only':
+                        # For decoder-only models, we need to do a full forward pass to get the correct causal attention mask
+                        logits = model(tgt= clean_tokens, attention_mask=attention_mask)
+                    elif isinstance(model, torch.nn.Module) and hasattr(model.cfg, 'model_type') and model.cfg.model_type == 'encoder_decoder':
+                        # For encoder-decoder models, we need to pass in the encoder tokens to get the correct cross-attention mask
+                        # Here, we just pass in the clean tokens as both encoder and decoder inputs
+                        logits = model(enc=clean_tokens, tgt=clean_tokens, attention_mask=attention_mask, enc_attention_mask=attention_mask)
+                    elif isinstance(model, torch.nn.Module) and hasattr(model.cfg, 'model_type') and model.cfg.model_type == 'encoder_only':
+                        logits = model(src=clean_tokens, attention_mask=attention_mask)
+                    else:
+                        logits = model(clean_tokens, attention_mask=attention_mask)
                     metric_value = metric(logits, clean_logits, input_lengths, label)
 
                     metric_value.backward(retain_graph=True)
@@ -302,7 +385,17 @@ def get_scores_clean_corrupted(model: HookedTransformer, graph: Graph, dataloade
 
         with torch.inference_mode():
             with model.hooks(fwd_hooks=fwd_hooks_corrupted):
-                _ = model(corrupted_tokens, attention_mask=attention_mask)
+                if isinstance(model, torch.nn.Module) and hasattr(model.cfg, 'model_type') and model.cfg.model_type == 'decoder_only':
+                    # For decoder-only models, we need to do a full forward pass to get the correct causal attention mask
+                    _ = model(tgt= corrupted_tokens, attention_mask=attention_mask)
+                elif isinstance(model, torch.nn.Module) and hasattr(model.cfg, 'model_type') and model.cfg.model_type == 'encoder_decoder':
+                    # For encoder-decoder models, we need to pass in the encoder tokens to get the correct cross-attention mask
+                    # Here, we just pass in the corrupted tokens as both encoder and decoder inputs
+                    _ = model(enc=corrupted_tokens, tgt=corrupted_tokens, attention_mask=attention_mask, enc_attention_mask=attention_mask)
+                elif isinstance(model, torch.nn.Module) and hasattr(model.cfg, 'model_type') and model.cfg.model_type == 'encoder_only':
+                    _ = model(src=corrupted_tokens, attention_mask=attention_mask)
+                else:
+                    _ = model(corrupted_tokens, attention_mask=attention_mask)
 
             with model.hooks(fwd_hooks=fwd_hooks_clean):
                 clean_logits = model(clean_tokens, attention_mask=attention_mask)
@@ -310,7 +403,17 @@ def get_scores_clean_corrupted(model: HookedTransformer, graph: Graph, dataloade
 
         total_steps = 2
         with model.hooks(bwd_hooks=bwd_hooks):
-            logits = model(clean_tokens, attention_mask=attention_mask)
+            if isinstance(model, torch.nn.Module) and hasattr(model.cfg, 'model_type') and model.cfg.model_type == 'decoder_only':
+                # For decoder-only models, we need to do a full forward pass to get the correct causal attention mask
+                logits = model(tgt= clean_tokens, attention_mask=attention_mask)
+            elif isinstance(model, torch.nn.Module) and hasattr(model.cfg, 'model_type') and model.cfg.model_type == 'encoder_decoder':
+                # For encoder-decoder models, we need to pass in the encoder tokens to get the correct cross-attention mask
+                # Here, we just pass in the clean tokens as both encoder and decoder inputs
+                logits = model(enc=clean_tokens, tgt=clean_tokens, attention_mask=attention_mask, enc_attention_mask=attention_mask)
+            elif isinstance(model, torch.nn.Module) and hasattr(model.cfg, 'model_type') and model.cfg.model_type == 'encoder_only':
+                logits = model(src=clean_tokens, attention_mask=attention_mask)
+            else:
+                logits = model(clean_tokens, attention_mask=attention_mask)
             metric_value = metric(logits, clean_logits, input_lengths, label)
             metric_value.backward()
             model.zero_grad()
@@ -426,7 +529,17 @@ def get_scores_information_flow_routes(model: HookedTransformer, graph: Graph, d
         hooks = make_hooks(n_pos, input_lengths)
         with torch.inference_mode():
             with model.hooks(fwd_hooks=hooks):
-                _ = model(clean_tokens, attention_mask=attention_mask)
+                if isinstance(model, torch.nn.Module) and hasattr(model.cfg, 'model_type') and model.cfg.model_type == 'decoder_only':
+                    # For decoder-only models, we need to do a full forward pass to get the correct causal attention mask
+                    _ = model(tgt= clean_tokens, attention_mask=attention_mask)
+                elif isinstance(model, torch.nn.Module) and hasattr(model.cfg, 'model_type') and model.cfg.model_type == 'encoder_decoder':
+                    # For encoder-decoder models, we need to pass in the encoder tokens to get the correct cross-attention mask
+                    # Here, we just pass in the clean tokens as both encoder and decoder inputs
+                    _ = model(enc=clean_tokens, tgt=clean_tokens, attention_mask=attention_mask, enc_attention_mask=attention_mask)
+                elif isinstance(model, torch.nn.Module) and hasattr(model.cfg, 'model_type') and model.cfg.model_type == 'encoder_only':
+                    _ = model(src=clean_tokens, attention_mask=attention_mask)
+                else:
+                    _ = model(clean_tokens, attention_mask=attention_mask)
 
     scores /= total_items
 
