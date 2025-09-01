@@ -67,9 +67,9 @@ def make_hooks_and_matrices(model: HookedTransformer, graph: Graph, batch_size:i
     """
     separate_activations = model.cfg.use_normalization_before_and_after and scores is None
     if separate_activations:
-        activation_difference = torch.zeros((2, batch_size, n_pos, graph.n_forward, model.cfg.d_model), device=model.cfg.device, dtype=model.cfg.dtype)
+        activation_difference = torch.zeros((2, batch_size, n_pos, graph.n_forward, model.cfg.d_model), device=next(model.parameters()).device, dtype=model.cfg.dtype)
     else:
-        activation_difference = torch.zeros((batch_size, n_pos, graph.n_forward, model.cfg.d_model), device=model.cfg.device, dtype=model.cfg.dtype)
+        activation_difference = torch.zeros((batch_size, n_pos, graph.n_forward, model.cfg.d_model), device=next(model.parameters()).device, dtype=model.cfg.dtype)
 
 
     fwd_hooks_clean = []
