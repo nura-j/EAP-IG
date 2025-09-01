@@ -97,7 +97,8 @@ def get_scores_eap(model: HookedTransformer, graph: Graph, dataloader:DataLoader
                 clean_logits = model(tgt=clean_tokens, attention_mask=attention_mask)
             else:
                 clean_logits = model(clean_tokens, attention_mask=attention_mask)
-
+        if isinstance(model, HookedTransformer):
+            pass
         with model.hooks(fwd_hooks=fwd_hooks_clean, bwd_hooks=bwd_hooks):
             if isinstance(model, torch.nn.Module) and model.cfg.model_type == 'decoder_only':
                 # For decoder-only models, we need to do a full forward pass to get the correct causal attention mask
@@ -149,12 +150,12 @@ def get_scores_eap_ig(model: HookedTransformer, graph: Graph, dataloader: DataLo
 
         with torch.inference_mode():
             with model.hooks(fwd_hooks=fwd_hooks_corrupted):
-                _ = model(corrupted_tokens, attention_mask=attention_mask)
+                _ = model(input_ids=corrupted_tokens, attention_mask=attention_mask)
 
             input_activations_corrupted = activation_difference[:, :, graph.forward_index(graph.nodes['input'])].clone()
 
             with model.hooks(fwd_hooks=fwd_hooks_clean):
-                clean_logits = model(clean_tokens, attention_mask=attention_mask)
+                clean_logits = model(input_ids=clean_tokens, attention_mask=attention_mask)
 
             input_activations_clean = input_activations_corrupted - activation_difference[:, :, graph.forward_index(graph.nodes['input'])]
 
@@ -169,7 +170,7 @@ def get_scores_eap_ig(model: HookedTransformer, graph: Graph, dataloader: DataLo
         for step in range(0, steps):
             total_steps += 1
             with model.hooks(fwd_hooks=[(graph.nodes['input'].out_hook, input_interpolation_hook(step))], bwd_hooks=bwd_hooks):
-                logits = model(clean_tokens, attention_mask=attention_mask)
+                logits = model(input_ids=clean_tokens, attention_mask=attention_mask)
                 metric_value = metric(logits, clean_logits, input_lengths, label)
                 if torch.isnan(metric_value).any().item():
                     print("Metric value is NaN")
