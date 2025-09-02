@@ -32,11 +32,15 @@ def tokenize_plus(model: HookedTransformer, inputs: List[str], max_length: Optio
         old_n_ctx = model.cfg.n_ctx
         model.cfg.n_ctx = max_length
     tokens = model.to_tokens(inputs, prepend_bos=True, padding_side='right', truncate=(max_length is not None))
+    print('Tokens shape', tokens.shape)
     if max_length is not None:
         model.cfg.n_ctx = old_n_ctx
     attention_mask = get_attention_mask(model.tokenizer, tokens, True)
+    print('Attention mask shape', attention_mask.shape)
     input_lengths = attention_mask.sum(1)
+    print('Input lengths shape', input_lengths.shape)
     n_pos = attention_mask.size(1)
+    print('n_pos', n_pos)
     return tokens, attention_mask, input_lengths, n_pos
     # if isinstance(model, HookedTransformer) and not hasattr(model, 'model_type') and model.model_type == 'decoder_only':
     #     tokens = model.to_tokens(inputs, prepend_bos=True, padding_side='right', truncate=(max_length is not None))
