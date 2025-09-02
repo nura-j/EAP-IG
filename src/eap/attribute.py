@@ -188,7 +188,7 @@ def get_scores_eap_ig(model: HookedTransformer, graph: Graph, dataloader: DataLo
                 elif isinstance(model, torch.nn.Module) and hasattr(model.cfg, 'model_type') and model.cfg.model_type == 'encoder_only':
                     _ = model(src=corrupted_tokens, attention_mask=attention_mask)
                 else:
-                    _ = model(input_ids=corrupted_tokens, attention_mask=attention_mask)
+                    _ = model(corrupted_tokens, attention_mask=attention_mask)
 
             input_activations_corrupted = activation_difference[:, :, graph.forward_index(graph.nodes['input'])].clone()
 
@@ -203,7 +203,7 @@ def get_scores_eap_ig(model: HookedTransformer, graph: Graph, dataloader: DataLo
                 elif isinstance(model, torch.nn.Module) and hasattr(model.cfg, 'model_type') and model.cfg.model_type == 'encoder_only':
                     clean_logits = model(src=clean_tokens, attention_mask=attention_mask)
                 else:
-                    clean_logits = model(input_ids=clean_tokens, attention_mask=attention_mask)
+                    clean_logits = model(clean_tokens, attention_mask=attention_mask)
 
             input_activations_clean = input_activations_corrupted - activation_difference[:, :, graph.forward_index(graph.nodes['input'])]
 

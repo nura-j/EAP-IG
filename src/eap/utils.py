@@ -89,7 +89,7 @@ def make_hooks_and_matrices(model: HookedTransformer, graph: Graph, batch_size:i
         print('acts shape', acts.shape)
         print('activation_difference shape', activation_difference.shape)
         print('index', index)
-        print('Hook', dir(hook), hook)
+        # print('Hook', dir(hook), hook)
         try:
             if separate_activations:
                 if add:
