@@ -111,9 +111,9 @@ def make_hooks_and_matrices(model: HookedTransformer, graph: Graph, batch_size:i
     # but necessary for models with Gemma's architecture.
     def activation_hook(index, activations, hook, add:bool=True):
         acts = activations.detach()
-        print('acts shape', acts.shape)
-        print('activation_difference shape', activation_difference.shape)
-        print('index', index)
+        # print('acts shape', acts.shape)
+        # print('activation_difference shape', activation_difference.shape)
+        # print('index', index)
         # print('Hook', dir(hook), hook)
         try:
             if separate_activations:

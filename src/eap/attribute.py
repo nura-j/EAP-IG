@@ -86,7 +86,7 @@ def get_scores_eap(model: HookedTransformer, graph: Graph, dataloader:DataLoader
             if intervention == 'patching':
                 # We intervene by subtracting out clean and adding in corrupted activations
                 with model.hooks(fwd_hooks_corrupted):
-                    print(f'corrupted tokens shape: {corrupted_tokens.shape}')
+                    # print(f'corrupted tokens shape: {corrupted_tokens.shape}')
                     if isinstance(model, torch.nn.Module) and hasattr(model.cfg, 'model_type') and model.cfg.model_type == 'decoder_only':
                         # For decoder-only models, we need to do a full forward pass to get the correct causal attention mask
                         _ = model(tgt= corrupted_tokens, attention_mask=attention_mask)
@@ -104,7 +104,7 @@ def get_scores_eap(model: HookedTransformer, graph: Graph, dataloader:DataLoader
                 activation_difference += means
 
             # For some metrics (e.g. accuracy or KL), we need the clean logits
-            print(f'clean tokens shape: {clean_tokens.shape}')
+            # print(f'clean tokens shape: {clean_tokens.shape}')
             if isinstance(model, torch.nn.Module) and hasattr(model.cfg,
                                                               'model_type') and model.cfg.model_type == 'decoder_only':
                 # For decoder-only models, we need to do a full forward pass to get the correct causal attention mask
@@ -122,7 +122,7 @@ def get_scores_eap(model: HookedTransformer, graph: Graph, dataloader:DataLoader
         # if isinstance(model, HookedTransformer):
         #     pass
         with model.hooks(fwd_hooks=fwd_hooks_clean, bwd_hooks=bwd_hooks):
-            print(f'clean tokens shape (2): {clean_tokens.shape}')
+            # print(f'clean tokens shape (2): {clean_tokens.shape}')
             if isinstance(model, torch.nn.Module) and hasattr(model.cfg,
                                                               'model_type') and model.cfg.model_type == 'decoder_only':
                 # For decoder-only models, we need to do a full forward pass to get the correct causal attention mask
