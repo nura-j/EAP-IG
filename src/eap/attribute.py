@@ -57,8 +57,9 @@ def get_scores_eap(model: HookedTransformer, graph: Graph, dataloader:DataLoader
         Tensor: a [src_nodes, dst_nodes] tensor of scores for each edge
     """
     dev = next(model.parameters()).device
+    model.cfg.device = dev
     dt = model.embed.weight.dtype if hasattr(model, "embed") else next(model.parameters()).dtype
-    model.cfg.dtype = dev
+    model.cfg.dtype = dt
     # scores = torch.zeros((graph.n_forward, graph.n_backward), device='cuda', dtype=model.cfg.dtype)
     scores = torch.zeros((graph.n_forward, graph.n_backward), device=dev, dtype=dt)
 
@@ -159,8 +160,9 @@ def get_scores_eap_ig(model: HookedTransformer, graph: Graph, dataloader: DataLo
         Tensor: a [src_nodes, dst_nodes] tensor of scores for each edge
     """
     dev = next(model.parameters()).device
+    model.cfg.device = dev
     dt = model.embed.weight.dtype if hasattr(model, "embed") else next(model.parameters()).dtype
-    model.cfg.dtype = dev
+    model.cfg.dtype = dt
     # scores = torch.zeros((graph.n_forward, graph.n_backward), device='cuda', dtype=model.cfg.dtype)
     scores = torch.zeros((graph.n_forward, graph.n_backward), device=dev, dtype=dt)
     
@@ -274,8 +276,9 @@ def get_scores_ig_activations(model: HookedTransformer, graph: Graph, dataloader
             means = means.unsqueeze(0)
 
     dev = next(model.parameters()).device
+    model.cfg.device = dev
     dt = model.embed.weight.dtype if hasattr(model, "embed") else next(model.parameters()).dtype
-    model.cfg.dtype = dev
+    model.cfg.dtype = dt
     # scores = torch.zeros((graph.n_forward, graph.n_backward), device='cuda', dtype=model.cfg.dtype)
     scores = torch.zeros((graph.n_forward, graph.n_backward), device=dev, dtype=dt)
     
@@ -383,8 +386,9 @@ def get_scores_clean_corrupted(model: HookedTransformer, graph: Graph, dataloade
         _type_: _description_
     """
     dev = next(model.parameters()).device
+    model.cfg.device = dev
     dt = model.embed.weight.dtype if hasattr(model, "embed") else next(model.parameters()).dtype
-    model.cfg.dtype = dev
+    model.cfg.dtype = dt
     # scores = torch.zeros((graph.n_forward, graph.n_backward), device='cuda', dtype=model.cfg.dtype)
     scores = torch.zeros((graph.n_forward, graph.n_backward), device=dev, dtype=dt)
     
@@ -460,7 +464,7 @@ def get_scores_information_flow_routes(model: HookedTransformer, graph: Graph, d
     dev = next(model.parameters()).device
     model.cfg.device = dev
     dt = model.embed.weight.dtype if hasattr(model, "embed") else next(model.parameters()).dtype
-    model.cfg.dtype = dev
+    model.cfg.dtype = dt
     # scores = torch.zeros((graph.n_forward, graph.n_backward), device='cuda', dtype=model.cfg.dtype)
     scores = torch.zeros((graph.n_forward, graph.n_backward), device=dev, dtype=dt)
 
